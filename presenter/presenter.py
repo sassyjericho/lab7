@@ -27,15 +27,17 @@ class Presenter:
             return str(valoare).lower()
 
     def formateaza_lista_animale(self):
-        textbox_content = f"{'Rasa':<10} {'Nume':<14} {'Varsta':<8} {'Greutate':<10}\n"
-        textbox_content += "-" * 46 + "\n"
+        antet = f"{'Rasa':<10} {'Nume':<14} {'Varsta':<8} {'Greutate':<10} Detalii\n"
+        separator = "-" * 78 + "\n"
+        textbox_content = antet + separator
 
         for animal in self.animale:
             categorie = self.get_categorie(animal)
             nume = animal.get_parameter("nume")
             varsta = animal.get_parameter("varsta")
             greutate = animal.get_parameter("greutate")
-            textbox_content += f"{categorie:<10} {str(nume):<14} {str(varsta):<8} {str(greutate):<10}\n"
+            detalii = ", ".join(f"{cheie}={valoare}" for cheie, valoare in animal.parameters.items() if cheie not in {"nume", "varsta", "greutate"})
+            textbox_content += f"{categorie:<10} {str(nume):<14} {str(varsta):<8} {str(greutate):<10} {detalii}\n"
 
         return textbox_content
 
