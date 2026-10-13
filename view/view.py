@@ -1,4 +1,6 @@
 import os
+
+from PIL import Image as PILImage, ImageOps
 import customtkinter as ctk
 
 from model.image_factory import ImageFactory
@@ -34,21 +36,15 @@ class CardAnimal(ctk.CTkFrame):
                                             fg_color="#8b5cf6", checkbox_height=18, checkbox_width=18)
         self.check_select.grid(row=0, column=0, padx=(16, 8), pady=(18, 6), sticky="w")
 
-        paleta = {
-            "Erbivor": "#5b7cfa",
-            "Carnivor": "#e76f51",
-            "Omnivor": "#7c3aed",
-            "default": "#5b7cfa"
-        }
-        categorie = animal.parameters.get("categorie") or self.get_categorie_for_display(animal)
-        bg_color = paleta.get(str(categorie), paleta["default"])
+        self.imagine = self.load_image_for_animal(animal)
+        self.image_box = ctk.CTkFrame(self, width=200, height=200, corner_radius=18, fg_color="#1f2333")
+        self.image_box.grid(row=0, column=1, padx=(8, 18), pady=(8, 8), sticky="w")
+        self.image_box.grid_propagate(False)
 
-        self.avatar = ctk.CTkFrame(self, width=80, height=80, corner_radius=16, fg_color=bg_color)
-        self.avatar.grid(row=0, column=1, padx=(8, 12), pady=(12, 6), sticky="w")
-        self.avatar.grid_propagate(False)
-
-        simbol = self.get_avatar_symbol(animal)
-        ctk.CTkLabel(self.avatar, text=simbol, font=ctk.CTkFont(size=30, weight="bold"), text_color="white").place(relx=0.5, rely=0.5, anchor="center")
+        self.image_label = ctk.CTkLabel(self.image_box, text="") if self.imagine is None else ctk.CTkLabel(self.image_box, image=self.imagine, text="")
+        if self.imagine is not None:
+            self.image_label.image = self.imagine
+        self.image_label.place(relx=0.5, rely=0.5, anchor="center")
 
         info_container = ctk.CTkFrame(self, fg_color="transparent")
         info_container.grid(row=0, column=2, padx=(0, 12), pady=12, sticky="w")
@@ -75,18 +71,40 @@ class CardAnimal(ctk.CTkFrame):
                                             command=lambda: self.callback_stergere(self.animal), corner_radius=10)
         self.buton_stergere.grid(row=1, column=0, sticky="ew")
 
-    @staticmethod
-    def get_avatar_symbol(animal):
-        mapping = {
-            "Vaca": "🐄", "Cal": "🐎", "Iepure": "🐇", "Oaie": "🐑", "Capra": "🐐", "Caprioara": "🦌",
-            "Elefant": "🐘", "Girafa": "🦒", "Panda": "🐼", "Koala": "🐨",
-            "Leu": "🦁", "Lup": "🐺", "Tigru": "🐯", "Pantera": "🐆", "Gepard": "🐆", "Hiena": "🐾",
-            "Rechin": "🦈", "Crocodil": "🐊", "Vultur": "🦅", "UrsPolar": "🐻‍❄️",
-            "Urs": "🐻", "Porc": "🐖", "Maimuta": "🐒", "Arici": "🦔", "Rata": "🐭", "Cainele": "🐕", "Pisica": "🐈",
-            "Gasca": "🦆", "Veverita": "🐿️", "Soarece": "🐁", "AnimalCustom": "🦄"
-        }
+    def load_image_for_animal(self, animal):
         tip = type(animal).__name__
-        return mapping.get(tip, str(animal.get_parameter("nume"))[0].upper())
+        base_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images")
+        image_path = os.path.join(base_dir, f"{tip}.png")
+        if os.path.exists(image_path):
+            try:
+                pil_image = PILImage.open(image_path).convert("RGBA")
+                square = self.zoom_crop_to_square(pil_image, 0.72, 360)
+                return ctk.CTkImage(light_image=square, dark_image=square, size=(200, 200))
+            except Exception:
+                pass
+
+        fallback = PILImage.new("RGBA", (360, 360), (90, 110, 180, 255))
+        return ctk.CTkImage(light_image=fallback, dark_image=fallback, size=(200, 200))
+
+    @staticmethod
+    def zoom_crop_to_square(pil_image, zoom_factor=0.72, output_size=360):
+        width, height = pil_image.size
+        zoom_factor = max(0.35, min(zoom_factor, 1.0))
+
+        crop_w = max(1, int(width * zoom_factor))
+        crop_h = max(1, int(height * zoom_factor))
+        left = max(0, (width - crop_w) // 2)
+        top = max(0, (height - crop_h) // 2)
+        right = min(width, left + crop_w)
+        bottom = min(height, top + crop_h)
+
+        cropped = pil_image.crop((left, top, right, bottom))
+        return ImageOps.fit(
+            cropped,
+            (output_size, output_size),
+            method=PILImage.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
 
     @staticmethod
     def get_descriere(animal):
