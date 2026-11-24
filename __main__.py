@@ -1,6 +1,5 @@
-from view.view import AplicatieAnimale
+from application import Application
 
 
 if __name__ == "__main__":
-    aplicatie = AplicatieAnimale()
-    aplicatie.mainloop()
+    Application.run()

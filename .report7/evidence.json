@@ -1,0 +1,5 @@
+{
+  "build": "PyInstaller: 6.22.3\nPython: 3.9.13\nFisier de configurare: Animale.spec\nPunct de intrare: __main__.py\nDirector distributiv: dist\\\\Animale\nExecutabil: Animale.exe\nDimensiune executabil: 5662170 octeti\nDependente: customtkinter>=5.2,<6\nmatplotlib>=3.9,<4\nPillow>=10,<13",
+  "dist": "Animale/\n├── _internal/\n├── Animale.exe (5662170 octeti)\n└── data/",
+  "tests": "test_crud_persistent_si_detalii (test_database.DatabaseTests) ... ok\ntest_initializare_si_tipuri (test_database.DatabaseTests) ... ok\ntest_sortare_si_agregari (test_database.DatabaseTests) ... ok\ntest_stergere_totala_nu_repopuleaza (test_database.DatabaseTests) ... ok\ntest_validare_si_rollback (test_database.DatabaseTests) ... ok\n\n----------------------------------------------------------------------\nRan 5 tests in 0.235s\n\nOK\n"
+}

@@ -10,4 +10,5 @@ class AnimalCustom(BaseClass):
         self.set_parameter("categorie", categorie)
 
         for cheie, valoare in (detalii or {}).items():
-            self.set_parameter(cheie, valoare)
+            if cheie not in {"nume", "varsta", "greutate", "categorie"}:
+                self.set_parameter(cheie, valoare)

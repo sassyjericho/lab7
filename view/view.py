@@ -1,10 +1,14 @@
 import os
+import sqlite3
+import sys
+from tkinter import messagebox
 
 from PIL import Image as PILImage, ImageOps
 import customtkinter as ctk
 
 from model.image_factory import ImageFactory
 from presenter.presenter import Presenter
+from view.chart_frame import GraficAnimaleFrame
 
 
 class AppHeader(ctk.CTkFrame):
@@ -57,8 +61,18 @@ class CardAnimal(ctk.CTkFrame):
         self.descriere_label = ctk.CTkLabel(info_container, text=self.get_descriere(animal), anchor="w", text_color="#cbd5e1")
         self.descriere_label.grid(row=1, column=0, pady=(10, 4), sticky="w")
 
+        varsta = str(animal.get_parameter("varsta"))
+        greutate = str(animal.get_parameter("greutate"))
+        self.date_principale_label = ctk.CTkLabel(
+            info_container,
+            text=f"Vârstă: {varsta} | Greutate: {greutate}",
+            anchor="w",
+            text_color="#e2e8f0"
+        )
+        self.date_principale_label.grid(row=2, column=0, pady=(2, 4), sticky="w")
+
         self.more_label = ctk.CTkLabel(info_container, text=self.get_more_info(animal), anchor="w", text_color="#a5b4fc")
-        self.more_label.grid(row=2, column=0, sticky="w")
+        self.more_label.grid(row=3, column=0, sticky="w")
 
         actions = ctk.CTkFrame(self, fg_color="transparent")
         actions.grid(row=0, column=3, padx=(4, 18), pady=(10, 8), sticky="e")
@@ -74,6 +88,17 @@ class CardAnimal(ctk.CTkFrame):
     def load_image_for_animal(self, animal):
         tip = type(animal).__name__
         base_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "images")
+        if getattr(sys, "frozen", False):
+            candidates = [
+                os.path.join(getattr(sys, "_MEIPASS", ""), "images"),
+                os.path.join(os.path.dirname(sys.executable), "images"),
+                os.path.join(os.path.dirname(sys.executable), "_internal", "images"),
+                base_dir,
+            ]
+            for candidate in candidates:
+                if candidate and os.path.isdir(candidate):
+                    base_dir = candidate
+                    break
         image_path = os.path.join(base_dir, f"{tip}.png")
         if os.path.exists(image_path):
             try:
@@ -291,6 +316,8 @@ class AplicatieAnimale(ctk.CTk):
 
         self.presenter = Presenter()
         self.animale_selectate = set()
+        self.grafice_window = None
+        self.grafic_frame = None
 
         self.header = AppHeader(self)
         self.header.pack(padx=20, pady=(18, 12), fill="x")
@@ -301,10 +328,18 @@ class AplicatieAnimale(ctk.CTk):
         self.btn_nume = ctk.CTkButton(self.sort_controls, text="Sort by name", command=self.on_sort_by_name, fg_color="#3a5aa8", hover_color="#4d6ec4")
         self.btn_varsta = ctk.CTkButton(self.sort_controls, text="Sort by age", command=self.on_sort_by_age, fg_color="#3a5aa8", hover_color="#4d6ec4")
         self.btn_greutate = ctk.CTkButton(self.sort_controls, text="Sort by weight", command=self.on_sort_by_weight, fg_color="#3a5aa8", hover_color="#4d6ec4")
+        self.btn_grafice = ctk.CTkButton(
+            self.sort_controls,
+            text="Afișează grafice",
+            command=self.on_afiseaza_grafice,
+            fg_color="#0f766e",
+            hover_color="#0d9488"
+        )
 
         self.btn_nume.pack(side="left", padx=10, pady=8, expand=True, fill="x")
         self.btn_varsta.pack(side="left", padx=10, pady=8, expand=True, fill="x")
         self.btn_greutate.pack(side="left", padx=10, pady=8, expand=True, fill="x")
+        self.btn_grafice.pack(side="left", padx=10, pady=8, expand=True, fill="x")
 
         self.container = ctk.CTkScrollableFrame(self, width=900, height=440, corner_radius=14, fg_color="#1f2333")
         self.container.pack(padx=20, pady=10, fill="both", expand=True)
@@ -320,13 +355,54 @@ class AplicatieAnimale(ctk.CTk):
 
         self.afiseaza_animale()
 
+    def report_callback_exception(self, exception, value, traceback):
+        if isinstance(value, (ValueError, sqlite3.Error)):
+            messagebox.showerror("Eroare", str(value), parent=self)
+        else:
+            super().report_callback_exception(exception, value, traceback)
+
     def afiseaza_animale(self):
+        self.animale_selectate.clear()
         for widget in self.container.winfo_children():
             widget.destroy()
 
         for animal in self.presenter.obtine_animale():
             card = CardAnimal(self.container, animal, self.sterge_animal, self.on_selectie_animal, self.on_editare_animal)
             card.pack(fill="x", padx=18, pady=10)
+
+        self.actualizeaza_grafice()
+
+    def actualizeaza_grafice(self):
+        if self.grafic_frame is None:
+            return
+
+        distributie = self.presenter.obtine_distributie_categorii()
+        medii_greutate = self.presenter.obtine_medie_greutate_categorii()
+        medii_varsta = self.presenter.obtine_medie_varsta_categorii()
+        self.grafic_frame.actualizeaza_grafice(distributie, medii_greutate, medii_varsta)
+
+    def on_afiseaza_grafice(self):
+        if self.grafice_window is not None and self.grafice_window.winfo_exists():
+            self.grafice_window.focus()
+            self.actualizeaza_grafice()
+            return
+
+        self.grafice_window = ctk.CTkToplevel(self)
+        self.grafice_window.title("Grafice animale")
+        self.grafice_window.geometry("1100x480")
+        self.grafice_window.minsize(1000, 440)
+
+        self.grafic_frame = GraficAnimaleFrame(self.grafice_window)
+        self.grafic_frame.pack(fill="both", expand=True, padx=12, pady=12)
+        self.actualizeaza_grafice()
+
+        self.grafice_window.protocol("WM_DELETE_WINDOW", self.on_inchide_fereastra_grafice)
+
+    def on_inchide_fereastra_grafice(self):
+        if self.grafice_window is not None and self.grafice_window.winfo_exists():
+            self.grafice_window.destroy()
+        self.grafice_window = None
+        self.grafic_frame = None
 
     def on_adauga_element(self):
         DialogAdaugareAnimal(self, self.adauga_animal)

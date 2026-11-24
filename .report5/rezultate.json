@@ -1,0 +1,37 @@
+{
+  "initial": {
+    "distributie": {
+      "Erbivor": 10,
+      "Carnivor": 10,
+      "Omnivor": 10
+    },
+    "greutate": {
+      "Carnivor": 270.1,
+      "Erbivor": 602.75,
+      "Omnivor": 52.45
+    },
+    "varsta": {
+      "Carnivor": 6.1,
+      "Erbivor": 4.9,
+      "Omnivor": 2.8
+    }
+  },
+  "adaugare": {
+    "distributie": {
+      "Erbivor": 11,
+      "Carnivor": 10,
+      "Omnivor": 10
+    },
+    "greutate": {
+      "Carnivor": 270.1,
+      "Erbivor": 557.05,
+      "Omnivor": 52.45
+    },
+    "varsta": {
+      "Carnivor": 6.1,
+      "Erbivor": 4.91,
+      "Omnivor": 2.8
+    }
+  },
+  "verificari": "Adaugare, editare, stergere, actualizare grafice si set gol: OK"
+}

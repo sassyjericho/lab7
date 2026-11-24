@@ -1,40 +1,23 @@
-from model.generator import GeneratorAnimale
+from model.animal_repository import AnimalRepository
 from model.animal_custom import AnimalCustom
+from model.statistici_animale import StatisticiAnimale
 
 
 class Presenter:
-    def __init__(self):
-        self.generator = GeneratorAnimale()
-        self.animale = self.generator.genereaza_toate_animalele()
+    def __init__(self, repository=None):
+        self.repository = repository or AnimalRepository()
+        self.statistici = StatisticiAnimale()
+        self.sortare = "id"
 
     def get_categorie(self, animal):
-        if type(animal).__name__ == "AnimalCustom":
-            return str(animal.get_parameter("categorie"))
-        if type(animal).__name__ in {
-            "Vaca", "Cal", "Iepure", "Oaie", "Capra", "Caprioara", "Elefant", "Girafa", "Panda", "Koala"
-        }:
-            return "Erbivor"
-        if type(animal).__name__ in {
-            "Leu", "Lup", "Tigru", "Pantera", "Gepard", "Hiena", "Rechin", "Crocodil", "Vultur", "UrsPolar"
-        }:
-            return "Carnivor"
-        return "Omnivor"
-
-    def extrage_valoare_sortare(self, animal, cheie):
-        valoare = animal.get_parameter(cheie)
-        if cheie == "nume":
-            return str(valoare).lower()
-        try:
-            return float(valoare)
-        except (TypeError, ValueError):
-            return str(valoare).lower()
+        return self.statistici.get_categorie(animal)
 
     def formateaza_lista_animale(self):
         antet = f"{'Rasa':<10} {'Nume':<14} {'Varsta':<8} {'Greutate':<10} Detalii\n"
         separator = "-" * 78 + "\n"
         textbox_content = antet + separator
 
-        for animal in self.animale:
+        for animal in self.obtine_animale():
             categorie = self.get_categorie(animal)
             nume = animal.get_parameter("nume")
             varsta = animal.get_parameter("varsta")
@@ -49,22 +32,22 @@ class Presenter:
         return textbox_content
 
     def sorteaza_dupa_nume(self):
-        self.animale.sort(key=lambda animal: self.extrage_valoare_sortare(animal, "nume"))
+        self.sortare = "nume"
         return self.formateaza_lista_animale()
 
     def sorteaza_dupa_varsta(self):
-        self.animale.sort(key=lambda animal: self.extrage_valoare_sortare(animal, "varsta"))
+        self.sortare = "varsta"
         return self.formateaza_lista_animale()
 
     def sorteaza_dupa_greutate(self):
-        self.animale.sort(key=lambda animal: self.extrage_valoare_sortare(animal, "greutate"))
+        self.sortare = "greutate"
         return self.formateaza_lista_animale()
 
     def obtine_lista_initiala(self):
         return self.formateaza_lista_animale()
 
     def obtine_animale(self):
-        return self.animale
+        return self.repository.toate(self.sortare)
 
     def adauga_animal(self, nume, varsta, greutate, categorie, detalii=None):
         animal = AnimalCustom(
@@ -74,27 +57,28 @@ class Presenter:
             categorie=str(categorie),
             detalii=detalii or {}
         )
-        self.animale.append(animal)
-        return animal
+        return self.repository.adauga(animal)
 
     def editeaza_animal(self, animal, nume, varsta, greutate, categorie, detalii=None):
-        animal.set_parameter("nume", str(nume))
-        animal.set_parameter("varsta", str(varsta))
-        animal.set_parameter("greutate", str(greutate))
-        animal.set_parameter("categorie", str(categorie))
-
-        for cheie in list(animal.parameters.keys()):
-            if cheie not in {"nume", "varsta", "greutate", "categorie"}:
-                del animal.parameters[cheie]
-
-        for cheie, valoare in (detalii or {}).items():
-            animal.set_parameter(str(cheie), valoare)
-
+        actualizat = type(animal).__new__(type(animal))
+        actualizat.parameters = dict(detalii or {})
+        actualizat.parameters.update(nume=str(nume), varsta=str(varsta),
+                                     greutate=str(greutate), categorie=str(categorie))
+        self.repository.actualizeaza(animal.database_id, actualizat)
+        animal.parameters = actualizat.parameters
         return animal
 
     def sterge_animal(self, animal):
-        self.animale = [element for element in self.animale if element is not animal]
+        self.repository.sterge([animal.database_id])
 
     def sterge_animale(self, animale):
-        selected = set(id(element) for element in animale)
-        self.animale = [element for element in self.animale if id(element) not in selected]
+        self.repository.sterge(animal.database_id for animal in animale)
+
+    def obtine_distributie_categorii(self):
+        return self.repository.distributie()
+
+    def obtine_medie_greutate_categorii(self):
+        return self.repository.medie("greutate")
+
+    def obtine_medie_varsta_categorii(self):
+        return self.repository.medie("varsta")
